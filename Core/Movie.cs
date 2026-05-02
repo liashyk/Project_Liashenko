@@ -5,6 +5,8 @@ namespace Core;
 /// </summary>
 public class Movie
 {
+    public Movie() { }   // додаємо, якщо немає
+
     /// <summary>Унікальний ідентифікатор фільму.</summary>
     public int Id { get; set; }
 
@@ -48,3 +50,4 @@ public class Movie
                $"  Бюджет:       ${Budget:N0}";
     }
 }
+
