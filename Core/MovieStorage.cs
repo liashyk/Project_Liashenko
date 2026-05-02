@@ -2,91 +2,118 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using System.Linq;
 
 namespace Core;
 
-/// <summary>
-/// Клас для збереження та завантаження колекції фільмів у JSON формат.
-/// Демонструє серіалізацію/десеріалізацію та роботу з файловою системою.
-/// </summary>
-public class MovieStorage
+public class MovieStorage : IDisposable
 {
-    private List<Movie> _movies;
+    private List<Movie> _movies = new();
     private readonly JsonSerializerOptions _jsonOptions;
+    private StreamWriter? _logWriter;
+    private bool _disposed = false;
 
-    public MovieStorage()
+    public MovieStorage(string? logFilePath = null)
     {
-        _movies = new List<Movie>();
         _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping   // ← ЦЕ ГОЛОВНЕ
         };
+
+        if (!string.IsNullOrEmpty(logFilePath))
+        {
+            _logWriter = new StreamWriter(logFilePath, true, System.Text.Encoding.UTF8);
+            Log("=== MovieStorage запущено ===");
+        }
     }
 
-    /// <summary>
-    /// Повертає список всіх фільмів.
-    /// </summary>
-    public List<Movie> GetMovies() => new(_movies);
+    public int Count => _movies.Count;   // ← Це було потрібно!
 
-    /// <summary>
-    /// Додає фільм до зберіганого списку.
-    /// </summary>
     public void AddMovie(Movie movie)
     {
         if (movie == null) throw new ArgumentNullException(nameof(movie));
         _movies.Add(movie);
+        Log($"Додано фільм: {movie.Title}");
     }
 
-    /// <summary>
-    /// Видаляє фільм зі списку за індексом.
-    /// </summary>
-    public bool RemoveMovieAt(int index)
-    {
-        if (index >= 0 && index < _movies.Count)
-        {
-            _movies.RemoveAt(index);
-            return true;
-        }
-        return false;
-    }
+    public List<Movie> GetMovies() => new(_movies);
 
-    /// <summary>
-    /// Очищує список фільмів.
-    /// </summary>
-    public void Clear() => _movies.Clear();
-
-    /// <summary>
-    /// Зберігає список фільмів у JSON файл за вказаним шляхом.
-    /// </summary>
     public void SaveToJson(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException("Путь до файлу не може бути порожнім.", nameof(filePath));
+            throw new ArgumentException("Шлях до файлу не може бути порожнім.");
 
         var json = JsonSerializer.Serialize(_movies, _jsonOptions);
         File.WriteAllText(filePath, json);
+        Log($"Збережено {_movies.Count} фільмів у {filePath}");
     }
 
-    /// <summary>
-    /// Завантажує список фільмів з JSON файлу.
-    /// </summary>
     public void LoadFromJson(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException("Путь до файлу не може бути порожнім.", nameof(filePath));
-
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"Файл не знайдено: {filePath}");
 
-        var json = File.ReadAllText(filePath);
-        _movies = JsonSerializer.Deserialize<List<Movie>>(json, _jsonOptions) ?? new List<Movie>();
+        try
+        {
+            var json = File.ReadAllText(filePath);
+            _movies = JsonSerializer.Deserialize<List<Movie>>(json, _jsonOptions)
+                      ?? new List<Movie>();
+            Log($"Завантажено {_movies.Count} фільмів з {filePath}");
+        }
+        catch (JsonException ex)
+        {
+            Log($"Помилка десеріалізації JSON: {ex.Message}");
+            throw;
+        }
     }
 
-    /// <summary>
-    /// Повертає кількість фільмів.
-    /// </summary>
-    public int Count => _movies.Count;
+    public void ExportToXml(string filePath)
+    {
+        var doc = new XDocument(
+            new XDeclaration("1.0", "utf-8", "yes"),
+            new XElement("Movies",
+                from m in _movies
+                where m.AverageRating >= 8.0
+                select new XElement("Movie",
+                    new XElement("Id", m.Id),
+                    new XElement("Title", m.Title),
+                    new XElement("Director", m.Director),
+                    new XElement("Genre", m.Genre),
+                    new XElement("Rating", m.AverageRating),
+                    new XElement("Budget", m.Budget)
+                )
+            )
+        );
+
+        doc.Save(filePath);
+        Log($"Експортовано у XML: {filePath}");
+    }
+
+    private void Log(string message)
+    {
+        _logWriter?.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
+        _logWriter?.Flush();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing && _logWriter != null)
+        {
+            Log("=== MovieStorage завершив роботу ===");
+            _logWriter.Dispose();
+            _logWriter = null;
+        }
+        _disposed = true;
+    }
 }

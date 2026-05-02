@@ -5,6 +5,8 @@ namespace Core;
 /// </summary>
 public class Actor
 {
+    public Actor() { }   // додаємо, якщо немає
+
     /// <summary>Унікальний ідентифікатор актора.</summary>
     public int Id { get; set; }
 
