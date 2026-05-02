@@ -20,8 +20,7 @@ public class MovieStorage : IDisposable
         _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
-            PropertyNameCaseInsensitive = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping   // нормальна кирилиця
+            PropertyNameCaseInsensitive = true
         };
 
         if (!string.IsNullOrEmpty(logFilePath))
@@ -31,7 +30,10 @@ public class MovieStorage : IDisposable
         }
     }
 
-    public int Count => _movies.Count;
+    /// <summary>
+    /// Повертає список всіх фільмів.
+    /// </summary>
+    public List<Movie> GetMovies() => new(_movies);
 
     public void AddMovie(Movie movie)
     {
@@ -41,31 +43,26 @@ public class MovieStorage : IDisposable
     }
 
     /// <summary>
-    /// Видаляє фільм за індексом
+    /// Видаляє фільм зі списку за індексом.
     /// </summary>
     public bool RemoveMovieAt(int index)
     {
         if (index >= 0 && index < _movies.Count)
         {
-            var removed = _movies[index];
             _movies.RemoveAt(index);
-            Log($"Видалено фільм: {removed.Title}");
             return true;
         }
         return false;
     }
 
     /// <summary>
-    /// Очищує всю колекцію
+    /// Очищує список фільмів.
     /// </summary>
-    public void Clear()
-    {
-        _movies.Clear();
-        Log("Колекцію очищено");
-    }
+    public void Clear() => _movies.Clear();
 
-    public List<Movie> GetMovies() => new(_movies);
-
+    /// <summary>
+    /// Зберігає список фільмів у JSON файл за вказаним шляхом.
+    /// </summary>
     public void SaveToJson(string filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
@@ -81,52 +78,8 @@ public class MovieStorage : IDisposable
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"Файл не знайдено: {filePath}");
 
-        try
-        {
-            var json = File.ReadAllText(filePath);
-            _movies = JsonSerializer.Deserialize<List<Movie>>(json, _jsonOptions)
-                      ?? new List<Movie>();
-            Log($"Завантажено {_movies.Count} фільмів з {filePath}");
-        }
-        catch (JsonException ex)
-        {
-            Log($"Помилка десеріалізації: {ex.Message}");
-            throw;
-        }
-    }
-
-    public void ExportToXml(string filePath)
-    {
-        var doc = new XDocument(
-            new XDeclaration("1.0", "utf-8", "yes"),
-            new XElement("Movies",
-                from m in _movies
-                where m.AverageRating >= 8.0
-                select new XElement("Movie",
-                    new XElement("Id", m.Id),
-                    new XElement("Title", m.Title),
-                    new XElement("Director", m.Director),
-                    new XElement("Genre", m.Genre),
-                    new XElement("Rating", m.AverageRating),
-                    new XElement("Budget", m.Budget)
-                )
-            )
-        );
-
-        doc.Save(filePath);
-        Log($"Експортовано у XML: {filePath}");
-    }
-
-    private void Log(string message)
-    {
-        _logWriter?.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
-        _logWriter?.Flush();
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
+        var json = File.ReadAllText(filePath);
+        _movies = JsonSerializer.Deserialize<List<Movie>>(json, _jsonOptions) ?? new List<Movie>();
     }
 
     protected virtual void Dispose(bool disposing)
