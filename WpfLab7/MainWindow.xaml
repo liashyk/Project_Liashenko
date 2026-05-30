@@ -37,13 +37,10 @@
                        Margin="10,10,10,5"/>
             <Button Content="➕ Додати"
                     Style="{StaticResource ControlButton}"
-                    Click="AddButton_Click"/>
-            <Button Content="✏️ Редагувати"
-                    Style="{StaticResource ControlButton}"
-                    Click="EditButton_Click"/>
+                    Command="{Binding AddCommand}" />
             <Button Content="🗑️ Видалити"
                     Style="{StaticResource ControlButton}"
-                    Click="DeleteButton_Click"/>
+                    Command="{Binding DeleteCommand}" />
         </StackPanel>
 
         <DataGrid Grid.Row="1" Grid.Column="1"
@@ -51,10 +48,13 @@
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
                   SelectionMode="Single"
-                  Margin="10">
+                  Margin="10"
+                  ItemsSource="{Binding Movies}"
+                  SelectedItem="{Binding Selected, Mode=TwoWay}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Назва"    Binding="{Binding Title}"    Width="*"/>
-                <DataGridTextColumn Header="Режисер"   Binding="{Binding Director}" Width="*"/>
+                <DataGridTextColumn Header="Режисер"   Binding="{Binding Director}" Width="150"/>
+                <DataGridTextColumn Header="Жанр"      Binding="{Binding Genre}" Width="100"/>
                 <DataGridTextColumn Header="Рік"       Binding="{Binding ReleaseDate, StringFormat=d}" Width="100"/>
                 <DataGridTextColumn Header="Рейтинг"   Binding="{Binding AverageRating}" Width="90"/>
             </DataGrid.Columns>

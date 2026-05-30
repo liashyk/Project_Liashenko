@@ -8,6 +8,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Exclude test sources from this WPF project so they're built by the separate test project -->
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+    <None Remove="Tests\**\*.*" />
+  </ItemGroup>
+
   <ItemGroup>
     <Page Include="App.xaml" />
   </ItemGroup>
